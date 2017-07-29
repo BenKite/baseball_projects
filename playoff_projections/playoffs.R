@@ -5,10 +5,11 @@
 library(BradleyTerry2)
 library(rockchalk)
 
-set.seed(6113
+set.seed(6113)
 
 year <- 2017
 dat <- read.csv(file = "data/2017Games.csv", stringsAsFactors = FALSE)
+str(dat) ## notice how R is not numeric!
 table(dat$R)
 dat$R <- as.numeric(dat$R)
 
@@ -134,8 +135,6 @@ processor <- function(output){
     nlcent <- c('CHC', 'CIN', 'MIL', 'PIT', 'STL')
     nlwest <- c('ARI', 'COL', 'LAD', 'SDP', 'SFG')
 
-    coefs <- output[[2]]
-
     tiebreaker <- function(x, coefs){
         if(nrow(x) > 1){
             teams <- x[,2]
@@ -151,6 +150,7 @@ processor <- function(output){
 
     playoffer <- function(x){
         games <- x[[1]]
+        coefs <- x[[2]]
         tmpaleast <- games[games[,1] %in% aleast,]
         tmpalcent <- games[games[,1] %in% alcent,]
         tmpalwest <- games[games[,1] %in% alwest,]
@@ -211,4 +211,17 @@ processor <- function(output){
     out
 }
 
-processor(output)
+x <- processor(output)
+playoffs <- x[["Make playoffs"]]
+playoffs <- data.frame(playoffs)
+playoffs <- playoffs[order(playoffs[,2], decreasing = TRUE),]
+row.names(playoffs) <- NULL
+names(playoffs) <- c("Team", "Percent Chance of Making Playoffs")
+playoffs[,2] <- paste0(playoffs[,2]*100, "%")
+playoffs
+
+
+library(xtable)
+write.csv(playoffs, "playoffs.csv", row.names = FALSE)
+
+print(xtable(playoffs, row.names = FALSE), type = "html", row.names = FALSE)
