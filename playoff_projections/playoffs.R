@@ -1,9 +1,10 @@
 ## Ben Kite
-## 2017-07-28
+## 2017-08-04
 
 ##install.packages("BradleyTerry2")
 library(BradleyTerry2)
 library(rockchalk)
+library(xtable)
 
 set.seed(6113)
 
@@ -15,7 +16,7 @@ dat$R <- as.numeric(dat$R)
 
 datprep <- function(dat){
 ## Need clean team name that is used at the end
-    dat$hteam <- dat$Tm
+    dat$hteam <- dat$HomeTeam
     dat$ateam <- dat$AwayTeam
 
     ## Make win variables
@@ -23,7 +24,7 @@ datprep <- function(dat){
     dat$AwayWin <- ifelse(dat$R < dat$RA, 1, 0)
 
     ## Make home field variables
-    dat$HomeTeam <- data.frame(team = dat$Tm, at.home = 1)
+    dat$HomeTeam <- data.frame(team = dat$HomeTeam, at.home = 1)
     dat$AwayTeam <- data.frame(team = dat$AwayTeam, at.home = 0)
 
     dat$date <- as.character(dat$Date)
@@ -116,6 +117,15 @@ currentDate <- Sys.Date()
 workdat <- dat[which(dat$date < currentDate),]
 upcoming <- dat[which(dat$date >= currentDate),]
 coefs <- learner(workdat)
+c_coefs <- coefs - mean(coefs)
+rankings <- data.frame(c_coefs, stringsAsFactors = FALSE)
+rankings[,"Team"] <- gsub("team", "", names(coefs))
+rankings <- rankings[order(rankings$c_coefs, decreasing = TRUE),]
+rankings <- rankings[,c(2, 1)]
+names(rankings) <- c("Team", "Ability")
+rankings[,2] <- round(rankings[,2], 3)
+row.names(rankings) <- NULL
+print(xtable(rankings), row.names = FALSE, type = "html", file = "bt_rankings.html")
 
 output <- lapply(1:1000, wrapper2, workdat, upcoming, coefs, hot = TRUE)
 
@@ -213,15 +223,58 @@ processor <- function(output){
 
 x <- processor(output)
 playoffs <- x[["Make playoffs"]]
-playoffs <- data.frame(playoffs)
+playoffs <- data.frame(playoffs, stringsAsFactors = FALSE)
+playoffs[,1] <- as.character(playoffs[,1])
 playoffs <- playoffs[order(playoffs[,2], decreasing = TRUE),]
 row.names(playoffs) <- NULL
-names(playoffs) <- c("Team", "Percent Chance of Making Playoffs")
+names(playoffs) <- c("Team", "Playoff Chances")
+playoffs[,"num"] <- playoffs[,2]
 playoffs[,2] <- paste0(playoffs[,2]*100, "%")
+playoffs[,2] <- ifelse(playoffs[,2] == "100%", ">99.9%", playoffs[,2])
 playoffs
 
+out <- merge(playoffs, rankings, all.y = TRUE)
+out <- out[order(out[,"Ability"], decreasing = TRUE),]
+out <- out[order(out[,"num"], decreasing = TRUE),]
+out <- out[,c("Team", "Playoff Chances", "Ability")]
+out[,"Playoff Chances"] <- ifelse(is.na(out[,"Playoff Chances"]), "<0.1%", out[,"Playoff Chances"])
+row.names(out) <- NULL
+out
+
+fancynames <- c("ARI" = "Arizona Diamondbacks",
+                "ATL" = "Atlanta Braves",
+                "BAL" = "Baltimore Orioles",
+                "BOS" = "Boston Red Sox",
+                "CHC" = "Chicago Cubs",
+                "CHW" = "Chicago White Sox",
+                "CIN" = "Cincinnati Reds",
+                "CLE" = "Cleveland Indians",
+                "COL" = "Colorado Rockies",
+                "DET" = "Detroit Tigers",
+                "HOU" = "Houston Astros",
+                "KCR" = "Kansas City Royals",
+                "LAA" = "Los Angeles Angels of Anaheim",
+                "LAD" = "Los Angeles Dodgers",
+                "MIA" = "Miami Marlins",
+                "MIL" = "Milwaukee Brewers",
+                "MIN" = "Minnesota Twins",
+                "NYM" = "New York Mets",
+                "NYY" = "New York Yankees",
+                "OAK" = "Oakland A's",
+                "PHI" = "Philadelphia Phillies",
+                "PIT" = "Pittsburgh Pirates",
+                "SDP" = "San Diego Padres",
+                "SEA" = "Seattle Mariners",
+                "SFG" = "San Franciso Giants",
+                "STL" = "St. Louis Cardinals",
+                "TBR" = "Tampa Bay Rays",
+                "TEX" = "Texas Rangers",
+                "TOR" = "Toronto Blue Jays",
+                "WSN" = "Washington Nationals")
+
+out[,1] <- fancynames[out[,1]]
+out
 
 library(xtable)
-write.csv(playoffs, "playoffs.csv", row.names = FALSE)
-
-print(xtable(playoffs, row.names = FALSE), type = "html", row.names = FALSE)
+print(xtable(out, row.names = FALSE), type = "html", row.names = FALSE)
+write.csv(out, "playoffs.csv")
