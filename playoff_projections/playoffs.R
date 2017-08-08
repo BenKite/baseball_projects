@@ -1,10 +1,11 @@
 ## Ben Kite
-## 2017-08-04
+## 2017-08-08
 
 ##install.packages("BradleyTerry2")
 library(BradleyTerry2)
 library(rockchalk)
 library(xtable)
+library(Metrics)
 
 set.seed(6113)
 
@@ -111,6 +112,43 @@ wrapper2 <- function(rep, workdat, upcoming, coefs, hot = FALSE, datespan = NULL
     out[[2]] <- output[[2]]
     out
 }
+
+## This is a much needed function for validation
+validatinator <- function(traindays, predictdays, dat, allprevious = FALSE){
+    dat <- dat[which(!is.na(dat$HomeWin)),]
+    days <- unique(dat$Date)
+    trainsets <- cbind(seq(1, length(days)  - predictdays*2, traindays), seq(predictdays + 1, length(days) - predictdays, traindays))
+    predictsets <- trainsets + predictdays
+    trainsets[,2] <- trainsets[,2] - 1
+    colnames(trainsets) <- c("starttrain", "endtrain")
+    colnames(predictsets) <- c("startpredict", "endpredict")
+    if (isTRUE(allprevious)){
+        trainsets[,"starttrain"] <- 1
+    }
+    input <- data.frame(trainsets, predictsets)
+    resultlist <- list()
+    for (i in 1:nrow(input)){
+        train <- dat[which(dat$Date %in% days[input[i,"starttrain"]:input[i,"endtrain"]]),]
+        coefs <- learner(train)
+        coefs <- ifelse(abs(coefs) > 20, 20, coefs)
+        test <- dat[which(dat$Date %in% days[input[i,"startpredict"]:input[i,"endpredict"]]),]
+        preds <- rep(NA, nrow(test))
+        homewin <- rep(NA, nrow(test))
+        for (t in 1:nrow(test)){
+            preds[t] <- predictor(coefs, test[t,"hteam"], test[t,"ateam"])
+            homewin[t] <- test[t,"HomeWin"]
+        }
+        results <- data.frame("HomeTeamWins" = homewin, "Predicted" = preds)
+        resultlist[[i]] <- results
+    }
+    ldat <- do.call("rbind", resultlist)
+    logLoss(ldat[,1], ldat[,2])
+}
+
+## What if we use the previous 30 days of baseball to predict the next
+## 30?  This log loss value can be compared to other combinations of
+## training and testing days.
+validatinator(30, 30, dat)
 
 dat <- datprep(dat)
 currentDate <- Sys.Date()
