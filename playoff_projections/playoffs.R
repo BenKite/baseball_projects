@@ -114,24 +114,33 @@ wrapper2 <- function(rep, workdat, upcoming, coefs, hot = FALSE, datespan = NULL
 }
 
 ## This is a much needed function for validation
-validatinator <- function(traindays, predictdays, dat, allprevious = FALSE){
+
+## The traindays argument is the number of days prior to a game being
+## predicted to use when training the Bradley-Terry model. If "all" is
+## provided, then all days prior in the season are used.
+## dat is a data.frame passed through datprep.
+## The mindays argument is the minimum number of days required for training.
+## This prevents poor fit from early in the season from influencing results.
+validatinator <- function(traindays, dat, mindays = 30){
     dat <- dat[which(!is.na(dat$HomeWin)),]
     days <- unique(dat$Date)
-    trainsets <- cbind(seq(1, length(days)  - predictdays*2, traindays), seq(predictdays + 1, length(days) - predictdays, traindays))
-    predictsets <- trainsets + predictdays
-    trainsets[,2] <- trainsets[,2] - 1
-    colnames(trainsets) <- c("starttrain", "endtrain")
-    colnames(predictsets) <- c("startpredict", "endpredict")
-    if (isTRUE(allprevious)){
-        trainsets[,"starttrain"] <- 1
+    if (traindays == "all"){
+        trainsets <- cbind(rep(1, length(days) -1), seq(1, length(days) - 1))
+        trainsets <- trainsets[which(trainsets[,2] >= mindays),]
+    } else {
+        trainsets <- cbind(seq(1, length(days) - 1) - traindays + 1, seq(1, length(days) - 1))
+        trainsets <- trainsets[which(trainsets[,1] > 0),]
+        trainsets <- trainsets[which(trainsets[,2] >= mindays),]
     }
-    input <- data.frame(trainsets, predictsets)
+    input <- data.frame(trainsets)
+    input[,3] <- input[,2] + 1
+    names(input) <- c("starttrain", "endtrain", "predict")
     resultlist <- list()
     for (i in 1:nrow(input)){
         train <- dat[which(dat$Date %in% days[input[i,"starttrain"]:input[i,"endtrain"]]),]
         coefs <- learner(train)
-        coefs <- ifelse(abs(coefs) > 20, 20, coefs)
-        test <- dat[which(dat$Date %in% days[input[i,"startpredict"]:input[i,"endpredict"]]),]
+        coefs <- ifelse(abs(coefs) > 10, 10, coefs)
+        test <- dat[which(dat$Date %in% days[input[i,"predict"]]),]
         preds <- rep(NA, nrow(test))
         homewin <- rep(NA, nrow(test))
         for (t in 1:nrow(test)){
@@ -142,13 +151,21 @@ validatinator <- function(traindays, predictdays, dat, allprevious = FALSE){
         resultlist[[i]] <- results
     }
     ldat <- do.call("rbind", resultlist)
+    ldat <- ldat[which(!is.na(ldat[,2])),]
     logLoss(ldat[,1], ldat[,2])
 }
 
-## What if we use the previous 30 days of baseball to predict the next
-## 30?  This log loss value can be compared to other combinations of
-## training and testing days.
-validatinator(30, 30, dat)
+## What if we use the previous 20 days of baseball to predict the
+## current day of games?  This log loss value can be compared to other
+## training days possibilities.
+validatinator(20, dat)
+
+## Test out the log loss across 10-80 training days
+traindays <- seq(10, 80, mindays = 45)
+sapply(traindays, validatinator, dat)
+
+## What if we use all available games?
+validatinator("all", dat, mindays = 45)
 
 dat <- datprep(dat)
 currentDate <- Sys.Date()
@@ -189,7 +206,7 @@ processor <- function(output){
             if (predictor(coefs, teams[1], teams[2], winloss = TRUE) == 1){
                 return(x[which(x[,2] == teams[1]),])
             } else {
-                return(x[which(x[,2] == teams[2]),])
+D                return(x[which(x[,2] == teams[2]),])
             }
         } else {
             return(x)
