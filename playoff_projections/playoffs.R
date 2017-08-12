@@ -52,7 +52,7 @@ learner <- function(dat, datespan = NULL){
            refcat = "KCR", data = dat)
     out <- out$coef
     out["teamKCR"] <- 0
-    #out["teamTBR:at.home"] <- 0
+    #out["teamKCR:at.home"] <- 0
     out
 }
 
@@ -60,8 +60,8 @@ learner <- function(dat, datespan = NULL){
 predictor <- function(coefs, homeTeam, awayTeam, winloss = FALSE){
     home <- paste0("team", homeTeam)
     away <- paste0("team", awayTeam)
-    #homef <- paste0("team", homeTeam, ":at.home")
-    odds <- coefs[home] - coefs[away]
+    homef <- paste0("team", homeTeam, ":at.home")
+    odds <- (coefs[home]) - coefs[away]
     prob <- exp(odds)/(1+exp(odds))
     if(winloss == TRUE){
         out <- ifelse(prob < .5, 0, 1)
@@ -155,16 +155,22 @@ validatinator <- function(traindays, dat, mindays = 30){
     logLoss(ldat[,1], ldat[,2])
 }
 
+dat <- datprep(dat)
+
 ## What if we use the previous 20 days of baseball to predict the
 ## current day of games?  This log loss value can be compared to other
 ## training days possibilities.
-validatinator(20, dat)
+validatinator("all", dat, 100)
 
 ## Test out the log loss across 10-80 training days
-traindays <- seq(10, 80, mindays = 45)
-sapply(traindays, validatinator, dat)
+traindays <- seq(60, 120)
+ll <- sapply(traindays, validatinator, dat, 120)
 
-## What if we use all available games?
+plot(traindays, ll, type = "l", xlab = "Training Days", ylab = "Logloss")
+abline(h = 0.6931472, col = "red")
+
+## What if we use all available games, but don't start using the model
+## until 45 days of baseball have been played?
 validatinator("all", dat, mindays = 45)
 
 dat <- datprep(dat)
@@ -228,6 +234,7 @@ D                return(x[which(x[,2] == teams[2]),])
         alcentwinner <- cbind("AL_Central", tmpalcent[tmpalcent[,2] == max(tmpalcent[,2]),1])
         alwestwinner <- cbind("AL_West", tmpalwest[tmpalwest[,2] == max(tmpalwest[,2]),1])
 
+        ll
         aleastwinner <- tiebreaker(aleastwinner, coefs)
         alcentwinner <- tiebreaker(alcentwinner, coefs)
         alwestwinner <- tiebreaker(alwestwinner, coefs)
