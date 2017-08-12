@@ -49,12 +49,18 @@ import cross_validate as cv
 
 
 ## It appears that a GBR model with a depth of 4 and 50 estimators is the best.
+## More testing should be done to better tune the model.
 
 clf = GradientBoostingRegressor(max_depth = 4, n_estimators = 50)
 clf.fit(train[preds], train[outcome])
 test["Prediction"] = clf.predict(test[preds])
+imps = clf.feature_importances_
+x = dict()
+for i in range(0, len(imps)):
+    x[i] = {preds[i]:imps[i]}
+x
 
-## Remove the case that had a terrible BA in 2016
+## Remove the cases with low values
 test = test.loc[test["BA"] > .100]
 test = test.loc[test["BA_previous"] > .100]
 
@@ -63,16 +69,18 @@ import matplotlib.pyplot as plt
 plt.scatter(test["Prediction"], test["BA"])
 ## R-squared
 numpy.corrcoef(test["BA"], test["Prediction"])[1,0]**2
+#r2_score(test["BA"], test["Prediction"])
 
 ## What if we just look at the previous season?
 plt.scatter(test["BA_previous"], test["BA"])
 ## R-squared
 numpy.corrcoef(test["BA"], test["BA_previous"])[1,0]**2
+#r2_score(test["BA"], test["BA_previous"])
 
 ## What if we just look at career BA?
 plt.scatter(test["Average_BA"], test["BA"])
 ## R-squared
-numpy.corrcoef(test["BA"], test["Average_BA"])[1,0]**2
+#numpy.corrcoef(test["BA"], test["Average_BA"])[1,0]**2
 
 
 
