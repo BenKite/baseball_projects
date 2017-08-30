@@ -160,18 +160,18 @@ dat <- datprep(dat)
 ## What if we use the previous 20 days of baseball to predict the
 ## current day of games?  This log loss value can be compared to other
 ## training days possibilities.
-validatinator("all", dat, 100)
+#validatinator("all", dat, 100)
 
 ## Test out the log loss across 10-80 training days
-traindays <- seq(60, 120)
-ll <- sapply(traindays, validatinator, dat, 120)
+#traindays <- seq(60, 120)
+#ll <- sapply(traindays, validatinator, dat, 120)
 
-plot(traindays, ll, type = "l", xlab = "Training Days", ylab = "Logloss")
-abline(h = 0.6931472, col = "red")
+#plot(traindays, ll, type = "l", xlab = "Training Days", ylab = "Logloss")
+#abline(h = 0.6931472, col = "red")
 
 ## What if we use all available games, but don't start using the model
 ## until 45 days of baseball have been played?
-validatinator("all", dat, mindays = 45)
+#validatinator("all", dat, mindays = 45)
 
 dat <- datprep(dat)
 currentDate <- Sys.Date()
@@ -212,7 +212,7 @@ processor <- function(output){
             if (predictor(coefs, teams[1], teams[2], winloss = TRUE) == 1){
                 return(x[which(x[,2] == teams[1]),])
             } else {
-D                return(x[which(x[,2] == teams[2]),])
+                return(x[which(x[,2] == teams[2]),])
             }
         } else {
             return(x)
