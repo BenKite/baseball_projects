@@ -9,6 +9,11 @@ library(Metrics)
 
 set.seed(6113)
 
+## This works in my directory structure because I have my
+## baseball_data repo sitting next baseball_projects
+
+system("python ../../baseball_data/gameData.py --y 2017 --dat data/")
+
 year <- 2017
 dat <- read.csv(file = "data/2017Games.csv", stringsAsFactors = FALSE)
 str(dat) ## notice how R is not numeric!
@@ -155,7 +160,7 @@ validatinator <- function(traindays, dat, mindays = 30){
     logLoss(ldat[,1], ldat[,2])
 }
 
-dat <- datprep(dat)
+##dat <- datprep(dat)
 
 ## What if we use the previous 20 days of baseball to predict the
 ## current day of games?  This log loss value can be compared to other
@@ -292,14 +297,15 @@ row.names(playoffs) <- NULL
 names(playoffs) <- c("Team", "Playoff Chances")
 playoffs[,"num"] <- playoffs[,2]
 playoffs[,2] <- paste0(playoffs[,2]*100, "%")
-playoffs[,2] <- ifelse(playoffs[,2] == "100%", ">99.9%", playoffs[,2])
+#playoffs[,2] <- ifelse(playoffs[,2] == "100%", ">99.9%", playoffs[,2])
 playoffs
 
 out <- merge(playoffs, rankings, all.y = TRUE)
 out <- out[order(out[,"Ability"], decreasing = TRUE),]
 out <- out[order(out[,"num"], decreasing = TRUE),]
 out <- out[,c("Team", "Playoff Chances", "Ability")]
-out[,"Playoff Chances"] <- ifelse(is.na(out[,"Playoff Chances"]), "<0.1%", out[,"Playoff Chances"])
+## Changing this to put 0% this late in the season until I incorporate a check for mathematically eliminated.
+out[,"Playoff Chances"] <- ifelse(is.na(out[,"Playoff Chances"]), "0%", out[,"Playoff Chances"])
 row.names(out) <- NULL
 out
 
