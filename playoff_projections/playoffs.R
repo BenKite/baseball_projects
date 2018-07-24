@@ -1,5 +1,5 @@
 ## Ben Kite
-## 2017-08-08
+## 2018-08-08
 
 ##install.packages("BradleyTerry2")
 library(BradleyTerry2)
@@ -12,10 +12,10 @@ set.seed(6113)
 ## This works in my directory structure because I have my
 ## baseball_data repo sitting next baseball_projects
 
-system("python ../../baseball_data/gameData.py --y 2017 --dat data/")
+system("python ../../baseball_data/gameData.py --y 2018 --dat data/")
 
-year <- 2017
-dat <- read.csv(file = "data/2017Games.csv", stringsAsFactors = FALSE)
+year <- 2018
+dat <- read.csv(file = "data/2018Games.csv", stringsAsFactors = FALSE)
 str(dat) ## notice how R is not numeric!
 table(dat$R)
 dat$R <- as.numeric(dat$R)
@@ -346,3 +346,5 @@ out
 library(xtable)
 print(xtable(out, row.names = FALSE), type = "html", row.names = FALSE)
 write.csv(out, "playoffs.csv")
+
+system("python image.py")
